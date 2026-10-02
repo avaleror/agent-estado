@@ -1,33 +1,35 @@
-# Estado
+# State
 
-Actualizado: 2026-10-02
-Quién: Andrés
+Updated: 2026-10-02
+Who: Andrés
 
-## Objetivo
+## Goal
 
-Dejar listo un comando para compartir el estado de cualquier proyecto con compañeros y con cualquier IA.
+A command that shares a project's current state with teammates and with any AI.
 
-## Hecho
+## Done
 
-- Plantillas de AGENTS.md, ESTADO.md, CLAUDE.md y la regla de Cursor.
-- Comando `estado init`, `estado ver` y `estado fecha`.
-- Pruebas en `tests/probar.sh`.
+- Templates for AGENTS.md, ESTADO.md, CLAUDE.md, and the Cursor rule.
+- `estado init`, `estado ver`, and `estado fecha`.
+- Tests in `tests/probar.sh`.
+- Agent instructions aligned with the Claude setup: English, short CLAUDE.md, changing facts in ESTADO.md, `.claude.local.md` gitignored.
 
-## Ahora
+## Now
 
-- Repo publicado e instalado en esta máquina.
+- Repo published and the command installed on this machine.
 
-## Siguiente
+## Next
 
-- Entrar en un proyecto real y ejecutar `estado init`.
+- Run `estado init` inside a real project.
 
-## Decisiones
+## Decisions
 
-- 2026-10-02 — El protocolo vive en `plantillas/protocolo.md`. `estado init` sustituye solo ese bloque.
-- 2026-10-02 — Si ESTADO.md ya existe, se deja como está.
-- 2026-10-02 — CLAUDE.md queda como un puente corto hacia AGENTS.md, porque Claude sigue ese archivo cuando existe.
-- 2026-10-02 — Beads, Serena y los volcados del repo no forman parte del kit. Se añaden en el proyecto que los necesite.
+- 2026-10-02: the protocol lives in `plantillas/protocolo.md`. `estado init` replaces only that block.
+- 2026-10-02: an existing ESTADO.md is left untouched.
+- 2026-10-02: CLAUDE.md is a short bridge to AGENTS.md, because Claude follows that file when it exists.
+- 2026-10-02: personal tone, banned words, and the pause before deleting or publishing stay in the user's Claude config. The template does not copy them.
+- 2026-10-02: Beads, Serena, and full-repo dumps stay out of the kit until a project needs them.
 
-## Bloqueos
+## Blockers
 
-- ninguno
+- none

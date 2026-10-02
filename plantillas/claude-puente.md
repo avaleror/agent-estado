@@ -1,5 +1,6 @@
 <!-- estado-claude -->
-Sigue @AGENTS.md.
-Al empezar, lee ESTADO.md y trabaja la sección Siguiente.
-Antes de terminar, actualiza ESTADO.md: fecha, Hecho, Ahora, Siguiente y Decisiones.
+Follow @AGENTS.md.
+At the start, read ESTADO.md and work on Next.
+Before you finish, update ESTADO.md: date, Done, Now, Next, and Decisions.
+What changes between sessions goes in ESTADO.md. Keep this file short and stable.
 <!-- /estado-claude -->

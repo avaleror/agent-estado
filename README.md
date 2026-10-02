@@ -2,7 +2,7 @@
 
 Archivos cortos, dentro del propio repositorio, para que un compañero, otra máquina u otra IA sepan en qué está el proyecto y sigan desde ahí.
 
-El estado viaja con `git pull`. No hace falta pegar el chat ni volcar el repositorio.
+El estado viaja con `git pull`. Las instrucciones que lee la IA están en inglés, igual que un `CLAUDE.md` de proyecto. El texto de `ESTADO.md` puede ir en español.
 
 ## Instalarlo una vez
 
@@ -25,19 +25,31 @@ Aparecen cuatro archivos:
 | Archivo | Quién lo lee | Qué contiene |
 |---|---|---|
 | `AGENTS.md` | Cursor, Codex, Grok, Copilot y Claude | Cómo se trabaja, y la orden de leer y actualizar el estado |
-| `ESTADO.md` | La persona y la IA | Objetivo, hecho, lo que está en curso, el siguiente paso y las decisiones |
-| `CLAUDE.md` | Claude | Un puente de pocas líneas hacia `AGENTS.md` |
+| `ESTADO.md` | La persona y la IA | Goal, Done, Now, Next y Decisions. Aquí va lo que cambia |
+| `CLAUDE.md` | Claude | Un puente de pocas líneas hacia `@AGENTS.md` |
 | `.cursor/rules/estado.mdc` | Cursor | La misma orden, aplicada siempre |
 
-Revisa la sección **Proyecto** de `AGENTS.md` y rellena `ESTADO.md`. Incluye los cuatro archivos en el commit.
+Revisa la sección **Project** de `AGENTS.md` y rellena `ESTADO.md`. Incluye esos archivos en el commit.
 
-`estado init` se puede volver a ejecutar. Conserva tu texto en `AGENTS.md` y en `CLAUDE.md`, y actualiza el bloque del protocolo, el que va entre las marcas HTML. Si `ESTADO.md` ya existe, lo deja como está. La regla `.cursor/rules/estado.mdc` se vuelve a escribir; el resto de reglas de esa carpeta se queda.
+`estado init` se puede volver a ejecutar. Conserva tu texto en `AGENTS.md` y en `CLAUDE.md`, y actualiza el bloque del protocolo, el que va entre las marcas HTML. Si `ESTADO.md` ya existe, lo deja como está.
 
-Tu compañero no necesita el comando. Con clonar el proyecto y abrir la carpeta, su IA lee los mismos archivos. Sirve igual si abre Cursor, Claude o Grok, y si está en otra máquina.
+La regla `.cursor/rules/estado.mdc` se vuelve a escribir. El resto de reglas de esa carpeta se queda.
+
+Quien clone el proyecto ya tiene los archivos. El comando prepara un proyecto que todavía no los tiene. Sirve igual en Cursor, Claude o Grok, y en otra máquina.
+
+## Claude
+
+`CLAUDE.md` se queda corto y estable. Claude lo lee entero al empezar, y a partir de unas 80 líneas las reglas se diluyen. Lo que cambia de una sesión a otra va en `ESTADO.md`.
+
+El puente dice `Follow @AGENTS.md`. Claude abre ese archivo al ver la referencia, así que las reglas viven en un solo sitio.
+
+`.claude.local.md` es para notas de una sola máquina. `estado init` lo añade a `.gitignore`.
+
+El tono personal, las palabras que no quieres ver y la pausa antes de borrar o publicar se quedan en tu configuración de Claude. El kit no los copia a cada proyecto.
 
 ## Cada día
 
-Al empezar, la IA tiene que leer `ESTADO.md` y trabajar lo que dice **Siguiente**. Al terminar, tiene que actualizar la fecha, Hecho, Ahora, Siguiente y, si hubo una elección que recordar, Decisiones.
+Al empezar, la IA tiene que leer `ESTADO.md` y trabajar lo que dice **Next**. Al terminar, tiene que actualizar la fecha, Done, Now, Next y, si hubo una elección que recordar, Decisions.
 
 Si una herramienta no lo hace sola, esta frase basta:
 
@@ -55,33 +67,33 @@ estado fecha
 `ESTADO.md` se queda corto. Un ejemplo:
 
 ```markdown
-# Estado
+# State
 
-Actualizado: 2026-10-02
-Quién: Ada
+Updated: 2026-10-02
+Who: Ada
 
-## Objetivo
+## Goal
 
 Dejar la demo del viernes reproducible en un portátil limpio.
 
-## Hecho
+## Done
 
 - El laboratorio levanta.
 - Falta el apartado de redes.
 
-## Ahora
+## Now
 
 - Página de redes.
 
-## Siguiente
+## Next
 
 - Escribir el apartado de redes y probarlo con el laboratorio recién creado.
 
-## Decisiones
+## Decisions
 
-- 2026-10-02 — Un solo laboratorio — el aula no tiene máquina para dos.
+- 2026-10-02: un solo laboratorio. El aula no tiene máquina para dos.
 
-## Bloqueos
+## Blockers
 
 - ninguno
 ```

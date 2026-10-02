@@ -1,8 +1,9 @@
-## Proyecto
+## Project
 
-Complétalo una vez y cámbialo solo cuando cambie la forma de trabajar:
+Fill this once. Change it only when the way of working changes.
 
-- Qué es:
-- Cómo se construye:
-- Cómo se prueba:
-- Convenciones:
+- What this is:
+- Why it exists:
+- How to build:
+- How to test:
+- Conventions:

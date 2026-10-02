@@ -94,15 +94,20 @@ assert_file "$proy/CLAUDE.md"
 assert_file "$proy/.cursor/rules/estado.mdc"
 
 hoy=$(date +%Y-%m-%d)
-if grep -q "^Actualizado: $hoy$" "$proy/ESTADO.md"; then
+if grep -q "^Updated: $hoy$" "$proy/ESTADO.md"; then
   ok "fecha de hoy"
 else
   bad "fecha de hoy"
 fi
-if grep -q "^Quién: Ada Prueba$" "$proy/ESTADO.md"; then
+if grep -q "^Who: Ada Prueba$" "$proy/ESTADO.md"; then
   ok "nombre de git"
 else
   bad "nombre de git"
+fi
+if grep -q -x '.claude.local.md' "$proy/.gitignore"; then
+  ok "gitignore local creado"
+else
+  bad "gitignore local creado"
 fi
 
 n_proto=$(grep -c -F '<!-- estado-protocolo -->' "$proy/AGENTS.md" || true)
@@ -127,6 +132,12 @@ if cmp -s "$proy/ESTADO.antes" "$proy/ESTADO.md"; then
   ok "segundo init no pisa ESTADO.md"
 else
   bad "segundo init pisó ESTADO.md"
+fi
+n_local=$(grep -c -F '.claude.local.md' "$proy/.gitignore" || true)
+if [ "$n_local" -eq 1 ]; then
+  ok "gitignore local sin duplicar"
+else
+  bad "gitignore local duplicado ($n_local)"
 fi
 
 # Archivos ya existentes: se conserva el texto y se sustituye el bloque viejo.
@@ -231,10 +242,32 @@ else
   bad "ver"
 fi
 (cd "$proy" && "$ESTADO" fecha >/dev/null)
-if grep -q "^Actualizado: $hoy$" "$proy/ESTADO.md" && grep -q 'hito propio' "$proy/ESTADO.md"; then
+if grep -q "^Updated: $hoy$" "$proy/ESTADO.md" && grep -q 'hito propio' "$proy/ESTADO.md"; then
   ok "fecha cambia el día y conserva el resto"
 else
   bad "fecha"
+fi
+
+es="$TMP/es"
+mkdir -p "$es"
+printf '%s\n' '# State' 'Actualizado: 1999-01-01' 'nota' > "$es/ESTADO.md"
+(cd "$es" && "$ESTADO" fecha >/dev/null)
+if grep -q "^Actualizado: $hoy$" "$es/ESTADO.md" && grep -q '^nota$' "$es/ESTADO.md"; then
+  ok "fecha conserva la etiqueta Actualizado"
+else
+  bad "fecha conserva la etiqueta Actualizado"
+fi
+
+ign="$TMP/ign"
+mkdir -p "$ign"
+printf '*.log' > "$ign/.gitignore"
+(cd "$ign" && "$ESTADO" init >/dev/null)
+(cd "$ign" && "$ESTADO" init >/dev/null)
+n_local=$(grep -c -F '.claude.local.md' "$ign/.gitignore" || true)
+if [ "$n_local" -eq 1 ] && grep -q '^\*\.log$' "$ign/.gitignore"; then
+  ok "gitignore existente conserva sus reglas"
+else
+  bad "gitignore existente ($n_local)"
 fi
 
 # Orden desconocida.

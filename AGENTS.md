@@ -1,39 +1,48 @@
 # Instrucciones para agentes
 
 <!-- estado-protocolo -->
-## Estado compartido
+## Shared state
 
-Al empezar una sesión:
+At the start of a session:
 
-1. Lee ESTADO.md.
-2. Trabaja lo que dice «Siguiente». Si está vacío, pregunta antes de abrir otro frente.
+1. Read ESTADO.md.
+2. Work on what Next says. If Next is empty, ask before opening another front.
 
-Antes de dar la tarea por terminada:
+Before you finish:
 
-1. Actualiza ESTADO.md: la fecha, Hecho, Ahora, Siguiente y, si tomaste una decisión que haya que recordar, Decisiones.
-2. Déjalo corto. El detalle vive en el código y en los commits.
-3. No pongas secretos, contraseñas ni tokens.
+1. Update ESTADO.md: the date, Done, Now, Next, and Decisions when a choice is worth keeping.
+2. Keep ESTADO.md short. Detail lives in the code and in commits.
+3. Do not put secrets, passwords, or tokens in it.
 
-Para gastar pocos tokens:
+To spend few tokens:
 
-- No vuelques el repositorio ni el historial del chat.
-- Lee solo los archivos necesarios para el paso en curso.
+- Do not dump the repository or the chat.
+- Read only the files the current step needs.
+- Do not re-read a file already read in this session unless it changed or you were asked.
+- Do not search the tree on a hunch.
+- Skip the end-of-task recap. The diff and ESTADO.md are the record.
 
-Las reglas propias del proyecto van fuera de este bloque. `estado init` sustituye lo que hay entre estas marcas.
+Keep AGENTS.md and CLAUDE.md stable and short. What changes between sessions goes in ESTADO.md.
+
+Project rules go outside this block. `estado init` replaces the text between these marks.
 <!-- /estado-protocolo -->
 
-## Este repositorio
+## This repository
 
-Qué es: el comando `estado` y las plantillas que dejan el estado de un proyecto dentro del propio repo, para compartirlo con compañeros y seguir en otra máquina o con otra IA.
+What this is: the `estado` command and the templates that keep a project's current state inside the repo, so a teammate, another machine, or another AI can continue the work.
 
-Cómo se prueba: `sh tests/probar.sh`
+Why it exists: shared state without pasting a chat or dumping the tree.
 
-Convenciones:
+How to test: `sh tests/probar.sh`
 
-- El protocolo se edita solo en `plantillas/protocolo.md`.
-- El puente de Claude se edita solo en `plantillas/claude-puente.md`.
-- Después de editarlos, corre `sh tests/armar.sh` para reescribir los archivos que los incluyen.
-- `plantillas/AGENTS.md` y `AGENTS.md` incluyen el protocolo. `estado init` sustituye ese bloque.
-- Fuera del bloque va lo propio del proyecto. Ahí no entra `estado init`.
-- Frases cortas. El objetivo es gastar pocos tokens.
-- Al cambiar el protocolo, corre las pruebas.
+Conventions:
+
+- Edit the protocol only in `plantillas/protocolo.md`.
+- Edit the Claude bridge only in `plantillas/claude-puente.md`.
+- After either edit, run `sh tests/armar.sh` so the files that include them are rewritten.
+- `plantillas/AGENTS.md` and `AGENTS.md` include the protocol. `estado init` replaces that block.
+- Project-specific rules stay outside the block. `estado init` leaves them in place.
+- Agent instructions are in English, short, and stable. What changes between sessions goes in ESTADO.md.
+- Do not use an em dash in files this repo writes.
+- Personal tone and vocabulary stay in the user's own Claude config. Do not copy them into the template.
+- Keep CLAUDE.md under a short bridge. A long CLAUDE.md dilutes its own rules.

@@ -1,28 +1,28 @@
-# Estado
+# State
 
-Actualizado:
-Quién:
+Updated:
+Who:
 
-## Objetivo
+## Goal
 
-Una frase: qué estamos haciendo.
+One sentence: what we are doing.
 
-## Hecho
-
--
-
-## Ahora
+## Done
 
 -
 
-## Siguiente
+## Now
 
-- El próximo paso, uno solo si es posible.
+-
 
-## Decisiones
+## Next
 
-- AAAA-MM-DD — decisión — por qué
+- The next step. One, when possible.
 
-## Bloqueos
+## Decisions
 
-- ninguno
+- YYYY-MM-DD: decision. Why.
+
+## Blockers
+
+- none

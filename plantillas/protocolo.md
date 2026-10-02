@@ -1,21 +1,26 @@
 <!-- estado-protocolo -->
-## Estado compartido
+## Shared state
 
-Al empezar una sesión:
+At the start of a session:
 
-1. Lee ESTADO.md.
-2. Trabaja lo que dice «Siguiente». Si está vacío, pregunta antes de abrir otro frente.
+1. Read ESTADO.md.
+2. Work on what Next says. If Next is empty, ask before opening another front.
 
-Antes de dar la tarea por terminada:
+Before you finish:
 
-1. Actualiza ESTADO.md: la fecha, Hecho, Ahora, Siguiente y, si tomaste una decisión que haya que recordar, Decisiones.
-2. Déjalo corto. El detalle vive en el código y en los commits.
-3. No pongas secretos, contraseñas ni tokens.
+1. Update ESTADO.md: the date, Done, Now, Next, and Decisions when a choice is worth keeping.
+2. Keep ESTADO.md short. Detail lives in the code and in commits.
+3. Do not put secrets, passwords, or tokens in it.
 
-Para gastar pocos tokens:
+To spend few tokens:
 
-- No vuelques el repositorio ni el historial del chat.
-- Lee solo los archivos necesarios para el paso en curso.
+- Do not dump the repository or the chat.
+- Read only the files the current step needs.
+- Do not re-read a file already read in this session unless it changed or you were asked.
+- Do not search the tree on a hunch.
+- Skip the end-of-task recap. The diff and ESTADO.md are the record.
 
-Las reglas propias del proyecto van fuera de este bloque. `estado init` sustituye lo que hay entre estas marcas.
+Keep AGENTS.md and CLAUDE.md stable and short. What changes between sessions goes in ESTADO.md.
+
+Project rules go outside this block. `estado init` replaces the text between these marks.
 <!-- /estado-protocolo -->

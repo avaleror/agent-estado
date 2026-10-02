@@ -32,7 +32,7 @@ PLANTILLAS=$(cd "$SCRIPT_DIR/../plantillas" && pwd)
 
 ayuda() {
   cat <<'EOF'
-estado — comparte el estado del proyecto con tu equipo y con cualquier IA
+estado: comparte el estado del proyecto con tu equipo y con cualquier IA
 
 Uso:
   estado init      prepara este directorio
@@ -43,9 +43,10 @@ Uso:
 init crea, si faltan, AGENTS.md, ESTADO.md, CLAUDE.md y la regla de Cursor.
 Si esos archivos ya existen, conserva tu texto. El bloque del protocolo
 (entre las marcas HTML) se actualiza. ESTADO.md no se modifica si ya existe.
+También añade .claude.local.md a .gitignore, para notas de tu máquina.
 
 En cada proyecto: entra en su carpeta y ejecuta estado init.
-Los archivos resultantes van en git.
+Los archivos resultantes van en git. Las instrucciones para la IA van en inglés.
 EOF
 }
 
@@ -117,14 +118,20 @@ set_fecha() {
   tmp=$(mktemp)
   if awk -v d="$today" '
     BEGIN { found = 0 }
-    /^Actualizado:/ { print "Actualizado: " d; found = 1; next }
+    /^(Actualizado|Updated):/ {
+      key = $0
+      sub(/:.*/, "", key)
+      print key ": " d
+      found = 1
+      next
+    }
     { print }
     END { if (found == 0) exit 1 }
   ' "$file" > "$tmp"; then
     mv "$tmp" "$file"
   else
     rm -f "$tmp"
-    die "$file no tiene una línea Actualizado:"
+    die "$file no tiene una línea Updated: ni Actualizado:"
   fi
 }
 
@@ -134,11 +141,31 @@ rellenar_estado_nuevo() {
   if [ -n "$nombre" ]; then
     tmp=$(mktemp)
     awk -v n="$nombre" '
-      /^Quién:[[:space:]]*$/ { print "Quién: " n; next }
+      /^(Who|Quién):[[:space:]]*$/ {
+        key = $0
+        sub(/:.*/, "", key)
+        print key ": " n
+        next
+      }
       { print }
     ' ESTADO.md > "$tmp"
     mv "$tmp" ESTADO.md
   fi
+}
+
+ensure_gitignore() {
+  line='.claude.local.md'
+  if [ ! -f .gitignore ]; then
+    printf '%s\n' "$line" > .gitignore
+    echo "creado .gitignore"
+    return
+  fi
+  if grep -q -F "$line" .gitignore; then
+    echo ".gitignore ya ignora .claude.local.md"
+    return
+  fi
+  printf '\n%s\n' "$line" >> .gitignore
+  echo "añadido .claude.local.md a .gitignore"
 }
 
 cmd_ver() {
@@ -149,7 +176,7 @@ cmd_ver() {
 cmd_fecha() {
   [ -f ESTADO.md ] || die "aquí no hay ESTADO.md. Entra en el proyecto y ejecuta: estado init"
   set_fecha ESTADO.md
-  echo "Actualizado: $(date +%Y-%m-%d)"
+  grep -E '^(Actualizado|Updated):' ESTADO.md | head -1
 }
 
 cmd_init() {
@@ -193,9 +220,11 @@ cmd_init() {
   cp "$PLANTILLAS/cursor-estado.mdc" .cursor/rules/estado.mdc
   echo "escrita .cursor/rules/estado.mdc"
 
+  ensure_gitignore
+
   echo ""
   echo "Listo en $pwd_now"
-  echo "Revisa la sección Proyecto de AGENTS.md y rellena ESTADO.md."
+  echo "Revisa la sección Project de AGENTS.md y rellena ESTADO.md."
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "Incluye estos archivos en el commit del proyecto."
   else

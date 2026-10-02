@@ -1,15 +1,19 @@
-## Este repositorio
+## This repository
 
-Qué es: el comando `estado` y las plantillas que dejan el estado de un proyecto dentro del propio repo, para compartirlo con compañeros y seguir en otra máquina o con otra IA.
+What this is: the `estado` command and the templates that keep a project's current state inside the repo, so a teammate, another machine, or another AI can continue the work.
 
-Cómo se prueba: `sh tests/probar.sh`
+Why it exists: shared state without pasting a chat or dumping the tree.
 
-Convenciones:
+How to test: `sh tests/probar.sh`
 
-- El protocolo se edita solo en `plantillas/protocolo.md`.
-- El puente de Claude se edita solo en `plantillas/claude-puente.md`.
-- Después de editarlos, corre `sh tests/armar.sh` para reescribir los archivos que los incluyen.
-- `plantillas/AGENTS.md` y `AGENTS.md` incluyen el protocolo. `estado init` sustituye ese bloque.
-- Fuera del bloque va lo propio del proyecto. Ahí no entra `estado init`.
-- Frases cortas. El objetivo es gastar pocos tokens.
-- Al cambiar el protocolo, corre las pruebas.
+Conventions:
+
+- Edit the protocol only in `plantillas/protocolo.md`.
+- Edit the Claude bridge only in `plantillas/claude-puente.md`.
+- After either edit, run `sh tests/armar.sh` so the files that include them are rewritten.
+- `plantillas/AGENTS.md` and `AGENTS.md` include the protocol. `estado init` replaces that block.
+- Project-specific rules stay outside the block. `estado init` leaves them in place.
+- Agent instructions are in English, short, and stable. What changes between sessions goes in ESTADO.md.
+- Do not use an em dash in files this repo writes.
+- Personal tone and vocabulary stay in the user's own Claude config. Do not copy them into the template.
+- Keep CLAUDE.md under a short bridge. A long CLAUDE.md dilutes its own rules.
