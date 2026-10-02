@@ -1,0 +1,10 @@
+---
+description: Lee y actualiza el estado compartido del proyecto
+alwaysApply: true
+---
+
+Sigue AGENTS.md.
+Al empezar, lee ESTADO.md y trabaja la sección Siguiente.
+Antes de terminar, actualiza ESTADO.md: fecha, Hecho, Ahora, Siguiente y Decisiones.
+No vuelques el repositorio ni el historial del chat.
+No escribas secretos en ESTADO.md.

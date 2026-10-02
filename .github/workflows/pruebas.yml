@@ -1,0 +1,12 @@
+name: pruebas
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh tests/probar.sh
