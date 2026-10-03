@@ -25,7 +25,7 @@ Aparecen cuatro archivos:
 | Archivo | Quién lo lee | Qué contiene |
 |---|---|---|
 | `AGENTS.md` | Cursor, Codex, Grok, Copilot y Claude | Cómo se trabaja, y la orden de leer y actualizar el estado |
-| `ESTADO.md` | La persona y la IA | Goal, Done, Now, Next y Decisions. Aquí va lo que cambia |
+| `ESTADO.md` | La persona y la IA | Goal, Done, Now, Next, Files, Failed y Decisions. Aquí va lo que cambia |
 | `CLAUDE.md` | Claude | Un puente de pocas líneas hacia `@AGENTS.md` |
 | `.cursor/rules/estado.mdc` | Cursor | La misma orden, aplicada siempre |
 
@@ -49,7 +49,7 @@ El tono personal, las palabras que no quieres ver y la pausa antes de borrar o p
 
 ## Cada día
 
-Al empezar, la IA tiene que leer `ESTADO.md` y trabajar lo que dice **Next**. Al terminar, tiene que actualizar la fecha, Done, Now, Next y, si hubo una elección que recordar, Decisions.
+Al empezar, la IA tiene que leer `ESTADO.md` y trabajar lo que dice **Next**. Si algo falla, apunta una línea en **Failed** y no repite ese camino. Al terminar, actualiza la fecha, Done, Now, Next, Files y, si hubo una elección que recordar, Decisions.
 
 Si una herramienta no lo hace sola, esta frase basta:
 
@@ -88,6 +88,18 @@ Dejar la demo del viernes reproducible en un portátil limpio.
 ## Next
 
 - Escribir el apartado de redes y probarlo con el laboratorio recién creado.
+
+## Files
+
+- docs/redes.md
+
+## Failed
+
+- Probar las redes dentro del laboratorio ya usado. El estado previo tapa el fallo.
+
+## Dropped
+
+- none
 
 ## Decisions
 

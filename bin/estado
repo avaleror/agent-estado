@@ -47,6 +47,7 @@ También añade .claude.local.md a .gitignore, para notas de tu máquina.
 
 En cada proyecto: entra en su carpeta y ejecuta estado init.
 Los archivos resultantes van en git. Las instrucciones para la IA van en inglés.
+ESTADO.md guarda también lo que falló, para no repetirlo.
 EOF
 }
 

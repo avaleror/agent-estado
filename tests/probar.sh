@@ -104,6 +104,11 @@ if grep -q "^Who: Ada Prueba$" "$proy/ESTADO.md"; then
 else
   bad "nombre de git"
 fi
+if grep -q '^## Failed$' "$proy/ESTADO.md" && grep -q '^## Files$' "$proy/ESTADO.md" && grep -q '^## Dropped$' "$proy/ESTADO.md"; then
+  ok "plantilla con fallos y archivos"
+else
+  bad "plantilla con fallos y archivos"
+fi
 if grep -q -x '.claude.local.md' "$proy/.gitignore"; then
   ok "gitignore local creado"
 else
