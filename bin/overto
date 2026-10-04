@@ -1,0 +1,349 @@
+#!/bin/sh
+# Prepare a project so people and any AI can share its handoff.
+set -eu
+
+VERSION=2
+
+die() {
+  echo "overto: $*" >&2
+  exit 1
+}
+
+inv=$0
+case $inv in
+  */*) ;;
+  *)
+    inv=$(command -v "$0" || true)
+    [ -n "$inv" ] || die "cannot find the program on PATH"
+    ;;
+esac
+
+while [ -L "$inv" ]; do
+  linkdir=$(dirname "$inv")
+  link=$(readlink "$inv")
+  case $link in
+    /*) inv=$link ;;
+    *) inv="$linkdir/$link" ;;
+  esac
+done
+
+SCRIPT_DIR=$(cd "$(dirname "$inv")" && pwd)
+TEMPLATES=$(cd "$SCRIPT_DIR/../templates" && pwd)
+
+help() {
+  cat <<'EOF'
+overto: hand this project to a teammate or to any AI
+
+Usage:
+  overto init             prepare this directory
+  overto show             print HANDOFF.md
+  overto date             set today's date in HANDOFF.md
+  overto share [name]     print a note you can send to a coworker
+  overto help             show this help
+
+init creates AGENTS.md, HANDOFF.md, CLAUDE.md, and the Cursor rule when they are missing.
+If those files already exist, your text stays. The protocol block, between the HTML marks, is refreshed.
+An existing HANDOFF.md is left as it is. An old ESTADO.md is renamed to HANDOFF.md when the new file is missing.
+It also adds .claude.local.md to .gitignore, for notes that belong on one machine.
+
+In each project, enter the folder and run overto init.
+The files belong in git. The AI instructions are in English.
+HANDOFF.md also records what failed, so the next session does not repeat it.
+overto share prints the note for one project: where it lives, the next step, and the line their AI should follow.
+EOF
+}
+
+require_templates() {
+  for f in protocol.md claude-bridge.md AGENTS.md HANDOFF.md CLAUDE.md cursor-handoff.mdc; do
+    [ -f "$TEMPLATES/$f" ] || die "missing $TEMPLATES/$f"
+  done
+}
+
+# Fail when a file has the opening mark and not the closing mark.
+require_pair() {
+  file=$1
+  start=$2
+  end=$3
+  if [ -f "$file" ] && grep -q -F "$start" "$file" && ! grep -q -F "$end" "$file"; then
+    die "$file has the opening mark and is missing the closing mark. Nothing was changed."
+  fi
+}
+
+replace_block() {
+  file=$1
+  start=$2
+  end=$3
+  block=$4
+  tmp=$(mktemp)
+  awk -v start="$start" -v end="$end" -v block="$block" '
+    $0 == start {
+      while ((getline line < block) > 0) print line
+      close(block)
+      skipping = 1
+      next
+    }
+    $0 == end {
+      skipping = 0
+      next
+    }
+    skipping != 1 { print }
+  ' "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
+
+ensure_block() {
+  dest=$1
+  template=$2
+  block=$3
+  start=$4
+  end=$5
+  label=$6
+
+  if [ ! -f "$dest" ]; then
+    cp "$template" "$dest"
+    echo "created $label"
+    return
+  fi
+
+  if grep -q -F "$start" "$dest"; then
+    replace_block "$dest" "$start" "$end" "$block"
+    echo "updated $label"
+  else
+    printf '\n' >> "$dest"
+    cat "$block" >> "$dest"
+    echo "added the handoff block to $label"
+  fi
+}
+
+set_date() {
+  file=$1
+  today=$(date +%Y-%m-%d)
+  tmp=$(mktemp)
+  if awk -v d="$today" '
+    BEGIN { found = 0 }
+    /^(Actualizado|Updated):/ {
+      key = $0
+      sub(/:.*/, "", key)
+      print key ": " d
+      found = 1
+      next
+    }
+    { print }
+    END { if (found == 0) exit 1 }
+  ' "$file" > "$tmp"; then
+    mv "$tmp" "$file"
+  else
+    rm -f "$tmp"
+    die "$file has neither an Updated: line nor an Actualizado: line"
+  fi
+}
+
+fill_new_handoff() {
+  set_date HANDOFF.md
+  name=$(git config user.name 2>/dev/null || true)
+  if [ -n "$name" ]; then
+    tmp=$(mktemp)
+    awk -v n="$name" '
+      /^(Who|Quién):[[:space:]]*$/ {
+        key = $0
+        sub(/:.*/, "", key)
+        print key ": " n
+        next
+      }
+      { print }
+    ' HANDOFF.md > "$tmp"
+    mv "$tmp" HANDOFF.md
+  fi
+}
+
+ensure_gitignore() {
+  line='.claude.local.md'
+  if [ ! -f .gitignore ]; then
+    printf '%s\n' "$line" > .gitignore
+    echo "created .gitignore"
+    return
+  fi
+  if grep -q -F "$line" .gitignore; then
+    echo ".gitignore already ignores .claude.local.md"
+    return
+  fi
+  printf '\n%s\n' "$line" >> .gitignore
+  echo "added .claude.local.md to .gitignore"
+}
+
+handoff_file() {
+  if [ -f HANDOFF.md ]; then
+    printf '%s\n' HANDOFF.md
+    return 0
+  fi
+  if [ -f ESTADO.md ]; then
+    printf '%s\n' ESTADO.md
+    return 0
+  fi
+  return 1
+}
+
+cmd_show() {
+  file=$(handoff_file) || die "no HANDOFF.md here. Enter the project and run: overto init"
+  if [ "$file" = ESTADO.md ]; then
+    echo "overto: this folder still has ESTADO.md. Run overto init to rename it." >&2
+  fi
+  cat "$file"
+}
+
+cmd_date() {
+  file=$(handoff_file) || die "no HANDOFF.md here. Enter the project and run: overto init"
+  if [ "$file" = ESTADO.md ]; then
+    echo "overto: this folder still has ESTADO.md. Run overto init to rename it." >&2
+  fi
+  set_date "$file"
+  grep -E '^(Actualizado|Updated):' "$file" | head -1
+}
+
+cmd_init() {
+  pwd_now=$(pwd)
+  if [ "$pwd_now" = "$HOME" ] || [ "$pwd_now" = / ]; then
+    die "I do not init this folder. Enter the project repo."
+  fi
+
+  require_templates
+  require_pair AGENTS.md '<!-- estado-protocolo -->' '<!-- /estado-protocolo -->'
+  require_pair CLAUDE.md '<!-- estado-claude -->' '<!-- /estado-claude -->'
+
+  ensure_block AGENTS.md \
+    "$TEMPLATES/AGENTS.md" \
+    "$TEMPLATES/protocol.md" \
+    '<!-- estado-protocolo -->' \
+    '<!-- /estado-protocolo -->' \
+    AGENTS.md
+
+  if [ -f HANDOFF.md ] && [ -f ESTADO.md ]; then
+    echo "HANDOFF.md and ESTADO.md are both here. Left both. Keep HANDOFF.md."
+  elif [ ! -f HANDOFF.md ] && [ -f ESTADO.md ]; then
+    mv ESTADO.md HANDOFF.md
+    echo "renamed ESTADO.md to HANDOFF.md"
+  elif [ ! -f HANDOFF.md ]; then
+    cp "$TEMPLATES/HANDOFF.md" HANDOFF.md
+    fill_new_handoff
+    echo "created HANDOFF.md"
+  else
+    echo "HANDOFF.md already exists: left it as it is"
+  fi
+
+  ensure_block CLAUDE.md \
+    "$TEMPLATES/CLAUDE.md" \
+    "$TEMPLATES/claude-bridge.md" \
+    '<!-- estado-claude -->' \
+    '<!-- /estado-claude -->' \
+    CLAUDE.md
+
+  mkdir -p .cursor/rules
+  cp "$TEMPLATES/cursor-handoff.mdc" .cursor/rules/handoff.mdc
+  echo "wrote .cursor/rules/handoff.mdc"
+  if [ -f .cursor/rules/estado.mdc ]; then
+    rm -f .cursor/rules/estado.mdc
+    echo "removed .cursor/rules/estado.mdc"
+  fi
+
+  ensure_gitignore
+
+  echo ""
+  echo "Ready in $pwd_now"
+  echo "Check the Project section of AGENTS.md and fill in HANDOFF.md."
+  echo "Then run: overto share, and send that note to your coworker."
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Commit these files with the project."
+  else
+    echo "This folder is not a git repo yet. When it is, commit these files."
+  fi
+}
+
+section_line() {
+  file=$1
+  name=$2
+  awk -v name="$name" '
+    $0 == "## " name { grab = 1; next }
+    grab && /^## / { exit }
+    grab && $0 ~ /^[[:space:]]*$/ { next }
+    grab {
+      sub(/^[[:space:]]*[-*][[:space:]]+/, "")
+      if ($0 == "-" || $0 == "none") exit
+      if ($0 == "One sentence: what we are doing.") exit
+      if ($0 == "The next step. One, when possible.") exit
+      print
+      exit
+    }
+  ' "$file"
+}
+
+cmd_share() {
+  who=${1:-}
+  file=$(handoff_file) || die "no HANDOFF.md here. Enter the project and run: overto init"
+  if [ "$file" = ESTADO.md ]; then
+    echo "overto: this folder still has ESTADO.md. Run overto init to rename it." >&2
+  fi
+  if grep -E -q 'sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{20}|xai-[A-Za-z0-9]{16,}' "$file"; then
+    echo "overto: HANDOFF.md looks like it contains a secret. Read it before you send this." >&2
+  fi
+
+  if [ -n "$who" ]; then
+    echo "Over to you, $who."
+  else
+    echo "Over to you."
+  fi
+  echo ""
+  echo "Project: $(basename "$(pwd)")"
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    url=$(git remote get-url origin 2>/dev/null || true)
+    branch=$(git branch --show-current 2>/dev/null || true)
+    if [ -n "$url" ]; then
+      echo "Remote: $url"
+    else
+      echo "No git remote yet. Send the files below."
+    fi
+    if [ -n "$branch" ]; then
+      echo "Branch: $branch"
+    fi
+  else
+    echo "This folder is not a git repo yet. Send the files below."
+  fi
+  echo ""
+  echo "Pull the repo, or drop these files in the project root:"
+  for f in HANDOFF.md AGENTS.md CLAUDE.md .cursor/rules/handoff.mdc; do
+    if [ -f "$f" ]; then
+      echo "- $f"
+    fi
+  done
+  goal=$(section_line "$file" Goal)
+  next=$(section_line "$file" Next)
+  if [ -n "$goal" ] || [ -n "$next" ]; then
+    echo ""
+  fi
+  if [ -n "$goal" ]; then
+    echo "Goal: $goal"
+  fi
+  if [ -n "$next" ]; then
+    echo "Next: $next"
+  fi
+  echo ""
+  echo "For your AI:"
+  echo "Read HANDOFF.md, follow AGENTS.md, and update HANDOFF.md before you finish."
+}
+
+cmd=${1:-help}
+shift || true
+
+case $cmd in
+  init) cmd_init ;;
+  show|ver) cmd_show ;;
+  date|fecha) cmd_date ;;
+  share) cmd_share "$@" ;;
+  help|ayuda|-h|--help) help ;;
+  version|--version) echo "$VERSION" ;;
+  *)
+    echo "overto: unknown command: $cmd" >&2
+    echo "" >&2
+    help >&2
+    exit 1
+    ;;
+esac

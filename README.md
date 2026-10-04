@@ -1,101 +1,110 @@
-# estado
+# overto
 
-Archivos cortos, dentro del propio repositorio, para que un compañero, otra máquina u otra IA sepan en qué está el proyecto y sigan desde ahí.
+Short files, inside the repo, so a teammate, another machine, or another AI can see where the project is and pick up from there.
 
-El estado viaja con `git pull`. Las instrucciones que lee la IA están en inglés, igual que un `CLAUDE.md` de proyecto. El texto de `ESTADO.md` puede ir en español.
+The name is the line you say when you pass the work on. Over to you. A coworker can take it, and so can an AI.
 
-## Instalarlo una vez
+The handoff travels with `git pull`. The file is `HANDOFF.md`. The instructions an AI reads are in English.
 
-```sh
-git clone https://github.com/avaleror/agent-estado.git ~/GitHub/agent-estado
-~/GitHub/agent-estado/instalar.sh
-```
-
-Eso deja el comando `estado` en `~/.local/bin`, enlazado a ese clon. Si mueves la carpeta, vuelve a ejecutar `instalar.sh`.
-
-## Usarlo en un proyecto
+## Install it once
 
 ```sh
-cd carpeta-del-proyecto
-estado init
+git clone https://github.com/avaleror/overto.git ~/GitHub/overto
+~/GitHub/overto/install.sh
 ```
 
-Aparecen cuatro archivos:
+That puts the `overto` command in `~/.local/bin`, linked to this clone. If you move the folder, run `install.sh` again.
 
-| Archivo | Quién lo lee | Qué contiene |
+## Use it in a project
+
+```sh
+cd project-folder
+overto init
+```
+
+Four files show up:
+
+| File | Who reads it | What it holds |
 |---|---|---|
-| `AGENTS.md` | Cursor, Codex, Grok, Copilot y Claude | Cómo se trabaja, y la orden de leer y actualizar el estado |
-| `ESTADO.md` | La persona y la IA | Goal, Done, Now, Next, Files, Failed y Decisions. Aquí va lo que cambia |
-| `CLAUDE.md` | Claude | Un puente de pocas líneas hacia `@AGENTS.md` |
-| `.cursor/rules/estado.mdc` | Cursor | La misma orden, aplicada siempre |
+| `AGENTS.md` | Cursor, Codex, Grok, Copilot, and Claude | How to work here, and the order to read and update the handoff |
+| `HANDOFF.md` | You and the AI | Goal, Done, Now, Next, Files, Failed, and Decisions. This is what changes |
+| `CLAUDE.md` | Claude | A few lines that point at `@AGENTS.md` |
+| `.cursor/rules/handoff.mdc` | Cursor | The same order, always on |
 
-Revisa la sección **Project** de `AGENTS.md` y rellena `ESTADO.md`. Incluye esos archivos en el commit.
+Check the **Project** section of `AGENTS.md` and fill in `HANDOFF.md`. Commit those files.
 
-`estado init` se puede volver a ejecutar. Conserva tu texto en `AGENTS.md` y en `CLAUDE.md`, y actualiza el bloque del protocolo, el que va entre las marcas HTML. Si `ESTADO.md` ya existe, lo deja como está.
+You can run `overto init` again. Your text in `AGENTS.md` and `CLAUDE.md` stays, and the protocol block between the HTML marks is refreshed.
 
-La regla `.cursor/rules/estado.mdc` se vuelve a escribir. El resto de reglas de esa carpeta se queda.
+If `HANDOFF.md` already exists, it is left as it is. An old `ESTADO.md` is renamed to `HANDOFF.md` when the new file is missing.
 
-Quien clone el proyecto ya tiene los archivos. El comando prepara un proyecto que todavía no los tiene. Sirve igual en Cursor, Claude o Grok, y en otra máquina.
+The Cursor rule is written again. The other rules in that folder stay. A leftover `.cursor/rules/estado.mdc` from an older run is removed, because that file was always rewritten.
 
 ## Claude
 
-`CLAUDE.md` se queda corto y estable. Claude lo lee entero al empezar, y a partir de unas 80 líneas las reglas se diluyen. Lo que cambia de una sesión a otra va en `ESTADO.md`.
+`CLAUDE.md` stays short and stable. Claude reads the whole file at the start, and past about 80 lines the rules get thin. What changes from one session to the next goes in `HANDOFF.md`.
 
-El puente dice `Follow @AGENTS.md`. Claude abre ese archivo al ver la referencia, así que las reglas viven en un solo sitio.
+The bridge says `Follow @AGENTS.md`. Claude opens that file when it sees the reference, so the rules live in one place.
 
-`.claude.local.md` es para notas de una sola máquina. `estado init` lo añade a `.gitignore`.
+`.claude.local.md` is for notes that belong on one machine. `overto init` adds it to `.gitignore`.
 
-El tono personal, las palabras que no quieres ver y la pausa antes de borrar o publicar se quedan en tu configuración de Claude. El kit no los copia a cada proyecto.
+Your personal tone, the words you do not want, and the pause before deleting or publishing stay in your Claude config. The kit does not copy them into every project.
 
-## Cada día
+## Each day
 
-Al empezar, la IA tiene que leer `ESTADO.md` y trabajar lo que dice **Next**. Si algo falla, apunta una línea en **Failed** y no repite ese camino. Al terminar, actualiza la fecha, Done, Now, Next, Files y, si hubo una elección que recordar, Decisions.
+At the start, the AI reads `HANDOFF.md` and works on **Next**. If something fails, it writes one line under **Failed** and does not take that path again. At the end, it updates the date, Done, Now, Next, Files, and Decisions when a choice is worth keeping.
 
-Si una herramienta no lo hace sola, esta frase basta:
+If a tool does not do this on its own, this line is enough:
 
 ```text
-Lee ESTADO.md, sigue AGENTS.md y, al terminar, actualiza ESTADO.md.
+Read HANDOFF.md, follow AGENTS.md, and update HANDOFF.md before you finish.
 ```
 
-Para verlo o poner la fecha de hoy:
+To print it, or to set today's date:
 
 ```sh
-estado ver
-estado fecha
+overto show
+overto date
+overto share Ada
 ```
 
-`ESTADO.md` se queda corto. Un ejemplo:
+`show` also answers to `ver`. `date` also answers to `fecha`.
+
+`overto share` prints a note for this one project. It names the repo, the remote when there is one, the next step, and the line your coworker can give their AI. Send that note.
+
+The files travel with the repo. If there is no remote yet, the note lists the files to send instead.
+
+Keep `HANDOFF.md` short. Here is one:
 
 ```markdown
-# State
+# Handoff
 
 Updated: 2026-10-02
 Who: Ada
 
 ## Goal
 
-Dejar la demo del viernes reproducible en un portátil limpio.
+Make Friday's demo reproducible on a clean laptop.
 
 ## Done
 
-- El laboratorio levanta.
-- Falta el apartado de redes.
+- The lab boots.
+- The network section is still missing.
 
 ## Now
 
-- Página de redes.
+- Network page.
 
 ## Next
 
-- Escribir el apartado de redes y probarlo con el laboratorio recién creado.
+- Write the network section and try it on a freshly created lab.
 
 ## Files
 
-- docs/redes.md
+- docs/network.md
 
 ## Failed
 
-- Probar las redes dentro del laboratorio ya usado. El estado previo tapa el fallo.
+- Try the network inside the lab we already used. The old state hides the bug.
 
 ## Dropped
 
@@ -103,44 +112,44 @@ Dejar la demo del viernes reproducible en un portátil limpio.
 
 ## Decisions
 
-- 2026-10-02: un solo laboratorio. El aula no tiene máquina para dos.
+- 2026-10-02: one lab. The classroom has no machine for two.
 
 ## Blockers
 
-- ninguno
+- none
 ```
 
-Ahí no van contraseñas, tokens ni secretos. El detalle largo se queda en el código y en los commits.
+Passwords, tokens, and secrets do not go in there. The long detail stays in the code and in the commits.
 
-## Para qué es cada pieza
+## What each piece is for
 
-- **Compartir con el equipo.** El estado está en el repo. Quien haga `git pull` ve el mismo objetivo, lo ya hecho y el paso que toca.
-- **Gastar pocos tokens.** Son dos archivos breves. La IA lee el siguiente paso y los ficheros que hagan falta para ese paso, y deja el resto del repo sin volcar.
-- **Seguir en otra máquina o con otra IA.** El mismo `git pull`. La sesión de terminal que tengas abierta sigue siendo otra cosa: estos archivos son el traspaso.
+- **Share it with the team.** The handoff is in the repo. A `git pull` shows the same goal, what is already done, and the step that is next.
+- **Spend few tokens.** Two short files. The AI reads the next step and the files that step needs, and leaves the rest of the repo alone.
+- **Continue on another machine, or with another AI.** Same `git pull`. The terminal session you have open is a different thing. These files are the handoff.
 
-## Cuando un proyecto crezca
+## When a project grows
 
-El kit se queda en estos archivos. Hay herramientas aparte para otros problemas:
+The kit stays these files. Other tools cover other problems:
 
-| Situación | Herramienta |
+| Situation | Tool |
 |---|---|
-| Muchas tareas abiertas a la vez | [Beads](https://github.com/gastownhall/beads) |
-| Un repo grande y la IA se pierde entre archivos | [Serena](https://github.com/oraios/serena) |
-| Hay que enseñarle un repo desconocido a una IA, una sola vez | [Repomix](https://github.com/yamadashy/repomix) o [Gitingest](https://github.com/coderamp-labs/gitingest) |
-| Las instrucciones de Claude, Cursor y Codex se han separado | [Rulesync](https://github.com/dyoshikawa/rulesync) |
+| Many tasks open at once | [Beads](https://github.com/gastownhall/beads) |
+| A large repo and the AI gets lost among files | [Serena](https://github.com/oraios/serena) |
+| You need to show an unknown repo to an AI, once | [Repomix](https://github.com/yamadashy/repomix) or [Gitingest](https://github.com/coderamp-labs/gitingest) |
+| The Claude, Cursor, and Codex instructions have drifted apart | [Rulesync](https://github.com/dyoshikawa/rulesync) |
 
-## Desarrollo de este repo
-
-```sh
-sh tests/probar.sh
-```
-
-El texto que viaja a los proyectos se edita en `plantillas/protocolo.md` y en `plantillas/claude-puente.md`. Después:
+## Working on this repo
 
 ```sh
-sh tests/armar.sh
+sh tests/test.sh
 ```
 
-Eso reescribe `AGENTS.md` y `CLAUDE.md` para que incluyan ese texto. Las reglas propias de un proyecto van fuera de esas marcas.
+The text that lands in projects is edited in `templates/protocol.md` and `templates/claude-bridge.md`. Then:
 
-Licencia MIT.
+```sh
+sh tests/build.sh
+```
+
+That rewrites `AGENTS.md` and `CLAUDE.md` so they include that text. A project's own rules go outside those marks.
+
+MIT license.

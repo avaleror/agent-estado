@@ -1,0 +1,12 @@
+---
+description: Read and update the shared project handoff
+alwaysApply: true
+---
+
+Follow AGENTS.md.
+At the start, read HANDOFF.md and work on Next.
+Before you finish, update HANDOFF.md: date, Done, Now, Next, Files, Failed, and Decisions.
+If an attempt fails, write one line under Failed and do not repeat it.
+Do not dump the repository or the chat.
+Do not write secrets in HANDOFF.md.
+Keep the reply short. Skip the trailing recap.

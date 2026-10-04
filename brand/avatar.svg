@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img">
+  <title>overto</title>
+  <rect width="128" height="128" rx="28" fill="#1A1614"/>
+  <g transform="translate(59.48 67.14) scale(0.92288)">
+    <path d="M13.83 -31.06 L36.46 -38.42" fill="none" stroke="#F2B43A" stroke-width="15.40" stroke-linecap="round"/>
+    <path d="M-7.07 -33.26 A34.00 34.00 0 1 0 13.83 -31.06" fill="none" stroke="#F6F1E7" stroke-width="15.40" stroke-linecap="round"/>
+  </g>
+</svg>
