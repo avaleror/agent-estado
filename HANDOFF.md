@@ -15,10 +15,11 @@ A command that shares a project's current handoff with teammates and with any AI
 - The repo text is English: short, direct, and written for people as well as agents.
 - The handoff file is `HANDOFF.md`. `overto init` renames an old `ESTADO.md` when the new file is missing.
 - The command is `overto`. It is the phrase you say when you pass the work to a person or to an AI.
+- The mark lives in `brand/`. The README shows the lockup. The site is `docs/`.
 
 ## Now
 
-- The kit is published and the command is installed on this machine.
+- GitHub Pages is the public page for the mark and the install steps.
 
 ## Next
 
@@ -26,8 +27,10 @@ A command that shares a project's current handoff with teammates and with any AI
 
 ## Files
 
+- brand/avatar.svg
+- brand/lockup.svg
+- docs/index.html
 - templates/protocol.md
-- templates/HANDOFF.md
 
 ## Failed
 
@@ -46,6 +49,7 @@ A command that shares a project's current handoff with teammates and with any AI
 - 2026-10-02: Beads, Serena, and full-repo dumps stay out of the kit until a project needs them.
 - 2026-10-03: failed attempts stay in the handoff, five lines at most. There is no second handoff file.
 - 2026-10-04: the handoff file is `HANDOFF.md`. The repo text is English. The command is `overto`.
+- 2026-10-04: the mark lives in `brand/`. The public page is GitHub Pages from `docs/`.
 
 ## Blockers
 

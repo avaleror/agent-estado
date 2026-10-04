@@ -1,6 +1,13 @@
 # overto
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/lockup-on-dark.png">
+  <img src="brand/lockup.png" alt="overto" width="280">
+</picture>
+
 Short files, inside the repo, so a teammate, another machine, or another AI can see where the project is and pick up from there.
+
+The site is [avaleror.github.io/overto](https://avaleror.github.io/overto/).
 
 The name is the line you say when you pass the work on. Over to you. A coworker can take it, and so can an AI.
 
