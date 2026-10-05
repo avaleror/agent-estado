@@ -128,6 +128,22 @@ Make Friday's demo reproducible on a clean laptop.
 
 Passwords, tokens, and secrets do not go in there. The long detail stays in the code and in the commits.
 
+## Hand it over live
+
+`overto share` prints a note you can paste. The files move when `overto here` and `overto to` are both running.
+
+The person who is waiting runs `overto here` and reads you the id. You run `overto to` and type that id.
+
+The two commands move `HANDOFF.md`, `AGENTS.md`, `CLAUDE.md`, and the Cursor rule. You both check a 6-digit code on a call or in person, then the receiver accepts the files.
+
+Pass `--direct ADDRESS` when the two machines can already reach each other. `overto here --direct` listens on this machine.
+
+When they cannot, both pass the same `--intro URL`. Start that point with `overto-pass intro` on a machine both can reach.
+
+This version tries TCP to the mapped address and to the local network. If that path does not open, the same process relays the ciphertext and stores nothing. UDP hole punching waits for a later version, and there is no public introducer address.
+
+`install.sh` builds `overto-pass` when Go is installed. `init`, `show`, `date`, and `share` work without it.
+
 ## What each piece is for
 
 - **Share it with the team.** The handoff is in the repo. A `git pull` shows the same goal, what is already done, and the step that is next.
@@ -148,6 +164,7 @@ The kit stays these files. Other tools cover other problems:
 ## Working on this repo
 
 ```sh
+go test ./...
 sh tests/test.sh
 ```
 

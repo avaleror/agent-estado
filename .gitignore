@@ -1,3 +1,5 @@
 .DS_Store
 *.tmp
 .claude.local.md
+bin/overto-pass
+dist/

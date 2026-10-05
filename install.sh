@@ -17,6 +17,16 @@ if [ -L "$DEST/estado" ]; then
   esac
 fi
 
+if command -v go >/dev/null 2>&1; then
+  if (cd "$ROOT" && go build -o "$ROOT/bin/overto-pass" ./cmd/overto-pass); then
+    echo "Built $ROOT/bin/overto-pass"
+  else
+    echo "overto-pass did not build. init, show, date, and share still work. here and to need the helper."
+  fi
+else
+  echo "Go is not on PATH, so overto-pass was not built. init, show, date, and share still work. here and to need the helper."
+fi
+
 echo "Ready: $DEST/overto"
 echo "It points at $ROOT/bin/overto"
 echo ""

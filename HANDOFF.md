@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-10-04
+Updated: 2026-10-05
 Who: Andrés
 
 ## Goal
@@ -16,21 +16,26 @@ A command that shares a project's current handoff with teammates and with any AI
 - The handoff file is `HANDOFF.md`. `overto init` renames an old `ESTADO.md` when the new file is missing.
 - The command is `overto`. It is the phrase you say when you pass the work to a person or to an AI.
 - The mark lives in `brand/`. The README shows the lockup. The site is `docs/`.
+- `overto here` and `overto to` move the four files. `overto-pass` does the handshake, the direct TCP path, and the blind relay.
+- The shell asks for the 6-digit code on both sides. A loopback direct run and a loopback relay run both land the file.
 
 ## Now
 
-- GitHub Pages is the public page for the mark and the install steps.
+- Two commands on one machine can try `overto here --direct` and `overto to --direct`. Two networks need `overto-pass intro` started by hand, then the same `--intro` URL on both sides.
 
 ## Next
 
-- Run `overto init` inside a real project so the protocol block and the filename update. Then `overto share` to send that project to a coworker.
+- Run `overto init` inside a real project so the protocol block and the filename update. Then `overto share` for that project.
+- A public introduction point is still an open choice. This version does not punch a UDP hole.
 
 ## Files
 
-- brand/avatar.svg
-- brand/lockup.svg
-- docs/index.html
-- templates/protocol.md
+- bin/overto
+- cmd/overto-pass/main.go
+- internal/pass/
+- tests/test.sh
+- tests/fake-pass.sh
+- .github/workflows/tests.yml
 
 ## Failed
 
@@ -50,6 +55,7 @@ A command that shares a project's current handoff with teammates and with any AI
 - 2026-10-03: failed attempts stay in the handoff, five lines at most. There is no second handoff file.
 - 2026-10-04: the handoff file is `HANDOFF.md`. The repo text is English. The command is `overto`.
 - 2026-10-04: the mark lives in `brand/`. The public page is GitHub Pages from `docs/`.
+- 2026-10-05: no MCP and no skill. `overto share` stays a printed note. `overto here` and `overto to` send the four files. `overto-pass` does SPAKE2 and the frames. This version tries TCP, then a blind relay. UDP punching is later. There is no public introducer address.
 
 ## Blockers
 

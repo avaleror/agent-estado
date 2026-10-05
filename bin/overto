@@ -2,11 +2,20 @@
 # Prepare a project so people and any AI can share its handoff.
 set -eu
 
-VERSION=2
+VERSION=3
+
+# Share warns on this set. The transfer adds a few more shapes, below.
+SECRET_RE='sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{20}|xai-[A-Za-z0-9]{16,}'
+TRANSFER_RE="$SECRET_RE|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}"
 
 die() {
   echo "overto: $*" >&2
   exit 1
+}
+
+fail2() {
+  echo "overto: $*" >&2
+  exit 2
 }
 
 inv=$0
@@ -39,6 +48,9 @@ Usage:
   overto show             print HANDOFF.md
   overto date             set today's date in HANDOFF.md
   overto share [name]     print a note you can send to a coworker
+  overto here [--for MINUTES]
+                          wait here for one handoff from another overto
+  overto to [id] [path]   send this project's handoff files to that instance
   overto help             show this help
 
 init creates AGENTS.md, HANDOFF.md, CLAUDE.md, and the Cursor rule when they are missing.
@@ -50,6 +62,13 @@ In each project, enter the folder and run overto init.
 The files belong in git. The AI instructions are in English.
 HANDOFF.md also records what failed, so the next session does not repeat it.
 overto share prints the note for one project: where it lives, the next step, and the line their AI should follow.
+
+here and to move HANDOFF.md and the agent files between two running commands.
+Pass --direct ADDRESS when the two machines can already reach each other.
+Pass --intro URL when both sides use the same introduction point.
+Start that point with overto-pass intro. This version tries TCP, then a relay that stores nothing.
+UDP hole punching waits for a later version, and there is no public introducer address.
+They need the overto-pass program next to this command.
 EOF
 }
 
@@ -251,6 +270,7 @@ cmd_init() {
   echo "Ready in $pwd_now"
   echo "Check the Project section of AGENTS.md and fill in HANDOFF.md."
   echo "Then run: overto share, and send that note to your coworker."
+  echo "If they have overto running, they run overto here, and you run overto to with the id."
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "Commit these files with the project."
   else
@@ -282,8 +302,10 @@ cmd_share() {
   if [ "$file" = ESTADO.md ]; then
     echo "overto: this folder still has ESTADO.md. Run overto init to rename it." >&2
   fi
-  if grep -E -q 'sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{20}|xai-[A-Za-z0-9]{16,}' "$file"; then
-    echo "overto: HANDOFF.md looks like it contains a secret. Read it before you send this." >&2
+  hide_body=0
+  if grep -E -q "$SECRET_RE" "$file"; then
+    echo "overto: HANDOFF.md looks like it contains a secret. Goal and Next stay out of the note." >&2
+    hide_body=1
   fi
 
   if [ -n "$who" ]; then
@@ -314,20 +336,742 @@ cmd_share() {
       echo "- $f"
     fi
   done
-  goal=$(section_line "$file" Goal)
-  next=$(section_line "$file" Next)
-  if [ -n "$goal" ] || [ -n "$next" ]; then
-    echo ""
-  fi
-  if [ -n "$goal" ]; then
-    echo "Goal: $goal"
-  fi
-  if [ -n "$next" ]; then
-    echo "Next: $next"
+  if [ "$hide_body" -eq 0 ]; then
+    goal=$(section_line "$file" Goal)
+    next=$(section_line "$file" Next)
+    if [ -n "$goal" ] || [ -n "$next" ]; then
+      echo ""
+    fi
+    if [ -n "$goal" ]; then
+      echo "Goal: $goal"
+    fi
+    if [ -n "$next" ]; then
+      echo "Next: $next"
+    fi
   fi
   echo ""
   echo "For your AI:"
   echo "Read HANDOFF.md, follow AGENTS.md, and update HANDOFF.md before you finish."
+}
+
+SHARE_SET='HANDOFF.md
+AGENTS.md
+CLAUDE.md
+.cursor/rules/handoff.mdc'
+
+file_size() {
+  case $(uname -s) in
+    Darwin) stat -f %z "$1" ;;
+    *) stat -c %s "$1" ;;
+  esac
+}
+
+file_owner() {
+  case $(uname -s) in
+    Darwin) stat -f %u "$1" ;;
+    *) stat -c %u "$1" ;;
+  esac
+}
+
+file_mode() {
+  case $(uname -s) in
+    Darwin) stat -f %Lp "$1" ;;
+    *) stat -c %a "$1" ;;
+  esac
+}
+
+hash_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$1" | awk '{ print $1 }'
+  fi
+}
+
+refuse_place() {
+  dir=$1
+  home_msg=$2
+  root_msg=$3
+  [ -d "$dir" ] && [ -r "$dir" ] && [ -x "$dir" ] || die "I cannot read $dir."
+  logical=$(cd "$dir" && pwd) || die "I cannot read $dir."
+  physical=$(cd "$dir" && pwd -P) || die "I cannot read $dir."
+  home_logical=$HOME
+  home_physical=$HOME
+  if [ -n "$HOME" ] && [ -d "$HOME" ]; then
+    home_logical=$(cd "$HOME" && pwd) || home_logical=$HOME
+    home_physical=$(cd "$HOME" && pwd -P) || home_physical=$home_logical
+  fi
+  if [ "$logical" = / ] || [ "$physical" = / ] \
+    || [ "$logical" = "$home_logical" ] || [ "$physical" = "$home_logical" ] \
+    || [ "$logical" = "$home_physical" ] || [ "$physical" = "$home_physical" ]; then
+    die "$home_msg"
+  fi
+  owner=$(file_owner "$physical") || die "I cannot read $dir."
+  if [ "$owner" = 0 ]; then
+    die "$root_msg"
+  fi
+}
+
+is_share_name() {
+  case $1 in
+    HANDOFF.md|AGENTS.md|CLAUDE.md|.cursor/rules/handoff.mdc) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+check_regular() {
+  path=$1
+  rel=$2
+  if [ -L "$path" ]; then
+    die "$rel is a link. I only send the file itself."
+  fi
+  if [ ! -f "$path" ] || [ ! -r "$path" ]; then
+    die "I cannot read $path."
+  fi
+  owner=$(file_owner "$path") || die "I cannot read $path."
+  if [ "$owner" = 0 ]; then
+    die "I do not send a root-owned file."
+  fi
+  sz=$(file_size "$path") || die "I cannot read $path."
+  if [ "$sz" -gt 262144 ]; then
+    die "$rel is too big."
+  fi
+  send_bytes=$((send_bytes + sz))
+  if [ "$send_bytes" -gt 524288 ]; then
+    die "the handoff is too big."
+  fi
+}
+
+# Prints one relative name per line. Sets send_root.
+collect_send() {
+  target=$1
+  send_bytes=0
+  send_list=$(mktemp)
+  if [ -z "$target" ]; then
+    send_root=$(pwd)
+    refuse_place "$send_root" \
+      "I do not send this folder. Enter the project repo." \
+      "I do not send a root-owned folder."
+    found_handoff=0
+    while read -r rel; do
+      [ -n "$rel" ] || continue
+      path=$send_root/$rel
+      if [ -e "$path" ] || [ -L "$path" ]; then
+        check_regular "$path" "$rel"
+        printf '%s\n' "$rel" >> "$send_list"
+        if [ "$rel" = HANDOFF.md ]; then
+          found_handoff=1
+        fi
+      fi
+    done <<EOF
+$SHARE_SET
+EOF
+    if [ "$found_handoff" -eq 0 ]; then
+      if [ -f "$send_root/ESTADO.md" ]; then
+        die "this folder still has ESTADO.md. Run overto init to rename it."
+      fi
+      die "no HANDOFF.md here. Enter the project and run: overto init"
+    fi
+  else
+    case $target in
+      /*) ;;
+      *) die "Pass the full path of the project." ;;
+    esac
+    if [ -d "$target" ]; then
+      send_root=$(cd "$target" && pwd)
+      refuse_place "$send_root" \
+        "I do not send this folder. Enter the project repo." \
+        "I do not send a root-owned folder."
+      found_handoff=0
+      while read -r rel; do
+        [ -n "$rel" ] || continue
+        path=$send_root/$rel
+        if [ -e "$path" ] || [ -L "$path" ]; then
+          check_regular "$path" "$rel"
+          printf '%s\n' "$rel" >> "$send_list"
+          if [ "$rel" = HANDOFF.md ]; then
+            found_handoff=1
+          fi
+        fi
+      done <<EOF
+$SHARE_SET
+EOF
+      if [ "$found_handoff" -eq 0 ]; then
+        if [ -f "$send_root/ESTADO.md" ]; then
+          die "this folder still has ESTADO.md. Run overto init to rename it."
+        fi
+        die "no HANDOFF.md here. Enter the project and run: overto init"
+      fi
+    else
+      rel=
+      case $target in
+        */.cursor/rules/handoff.mdc) rel=.cursor/rules/handoff.mdc ;;
+        *)
+          base=$(basename "$target")
+          case $base in
+            HANDOFF.md|AGENTS.md|CLAUDE.md) rel=$base ;;
+            *) die "I only send HANDOFF.md and the agent files." ;;
+          esac
+          ;;
+      esac
+      send_root=$(dirname "$target")
+      case $rel in
+        .cursor/rules/handoff.mdc)
+          send_root=$(dirname "$(dirname "$send_root")")
+          ;;
+      esac
+      refuse_place "$send_root" \
+        "I do not send this folder. Enter the project repo." \
+        "I do not send a root-owned folder."
+      check_regular "$target" "$rel"
+      printf '%s\n' "$rel" >> "$send_list"
+    fi
+  fi
+}
+
+normalize_id() {
+  printf '%s' "$1" | tr -d '[:space:]-' | tr '[:upper:]' '[:lower:]' | tr 'ilo' '110'
+}
+
+# A path token is absolute, contains a slash, or is a short name like proj.
+# A grouped id contains a dash. A raw id is 34 alphabet characters.
+path_token() {
+  case $1 in
+    .|..|/*|./*|../*|*/*) return 0 ;;
+  esac
+  case $1 in
+    *-*) return 1 ;;
+  esac
+  n=$(normalize_id "$1")
+  if [ "${#n}" -eq 34 ]; then
+    return 1
+  fi
+  return 0
+}
+
+format_id() {
+  printf '%s\n' "$1" | awk '{
+    print substr($0,1,8) "-" substr($0,9,4) "-" substr($0,13,4) "-" substr($0,17,4) "-" substr($0,21,4) "-" substr($0,25,4) "-" substr($0,29,6)
+  }'
+}
+
+require_id_shape() {
+  norm=$(normalize_id "$1")
+  case $norm in
+    *[!0123456789abcdefghjkmnpqrstvwxyz]*) die "that id is not valid." ;;
+  esac
+  if [ "${#norm}" -ne 34 ]; then
+    die "that id is not valid."
+  fi
+  display_id=$(format_id "$norm")
+}
+
+new_id() {
+  raw=$(od -An -tu1 -N 34 /dev/urandom | tr -s ' [:cntrl:]' '\n' | awk '
+    BEGIN { a = "0123456789abcdefghjkmnpqrstvwxyz" }
+    NF { printf "%s", substr(a, ($1 % 32) + 1, 1) }
+    END { printf "\n" }
+  ')
+  format_id "$raw"
+}
+
+intro_ok() {
+  url=$1
+  [ -n "$url" ] || return 0
+  case $url in
+    https://*) return 0 ;;
+    http://127.0.0.1|http://127.0.0.1/*|http://127.0.0.1:*) return 0 ;;
+    'http://[::1]'|'http://[::1]/'*|'http://[::1]:'*) return 0 ;;
+    *) die "the introduction point has to be https." ;;
+  esac
+}
+
+need_intro_or_direct() {
+  if [ -n "$direct" ]; then
+    [ -n "$intro" ] && intro_ok "$intro"
+    return 0
+  fi
+  use_intro=$intro
+  if [ -z "$use_intro" ]; then
+    use_intro=${OVERTO_INTRO:-}
+  fi
+  if [ -z "$use_intro" ]; then
+    die "no introduction point is set. Pass --intro, or use --direct."
+  fi
+  intro_ok "$use_intro"
+  intro=$use_intro
+}
+
+parse_for() {
+  value=$1
+  case $value in
+    ""|*[!0-9]*) die "--for takes a whole number of minutes." ;;
+  esac
+  for_min=$value
+}
+
+find_pass() {
+  if [ -n "${OVERTO_PASS:-}" ]; then
+    if [ ! -f "$OVERTO_PASS" ]; then
+      die "this command needs overto-pass, and it is not next to the overto command."
+    fi
+    printf '%s\n' "$OVERTO_PASS"
+    return 0
+  fi
+  if [ -f "$SCRIPT_DIR/overto-pass" ]; then
+    printf '%s\n' "$SCRIPT_DIR/overto-pass"
+    return 0
+  fi
+  leaf=
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-arm64) leaf=darwin-arm64 ;;
+    Darwin-x86_64) leaf=darwin-amd64 ;;
+    Linux-x86_64) leaf=linux-amd64 ;;
+    Linux-aarch64|Linux-arm64) leaf=linux-arm64 ;;
+  esac
+  if [ -n "$leaf" ] && [ -f "$SCRIPT_DIR/../dist/overto-pass-$leaf" ]; then
+    printf '%s\n' "$SCRIPT_DIR/../dist/overto-pass-$leaf"
+    return 0
+  fi
+  die "this command needs overto-pass, and it is not next to the overto command."
+}
+
+ask_yes() {
+  printf '%s ' "$1" >&2
+  ans=
+  read ans || ans=${ans:-}
+  case $ans in
+    y|Y|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+pass_stop() {
+  if [ -n "${helper_pid:-}" ]; then
+    kill "$helper_pid" 2>/dev/null || true
+    wait "$helper_pid" 2>/dev/null || true
+  fi
+  if [ -n "${timer_pid:-}" ]; then
+    kill "$timer_pid" 2>/dev/null || true
+    wait "$timer_pid" 2>/dev/null || true
+  fi
+  if [ -n "${RUN:-}" ]; then
+    rm -rf "$RUN"
+  fi
+}
+
+open_run() {
+  helper_pid=
+  timer_pid=
+  base=${TMPDIR:-/tmp}
+  RUN=$(mktemp -d "$base/overto.XXXXXX")
+  chmod 700 "$RUN"
+  mkdir -m 700 "$RUN/event" "$RUN/cmd" "$RUN/stage"
+  trap pass_stop EXIT
+  printf '%s\n' "$display_id" > "$RUN/id"
+  chmod 600 "$RUN/id"
+}
+
+start_timer() {
+  if [ "${for_min:-0}" -gt 0 ]; then
+    parent=$$
+    (
+      sleep_pid=
+      trap 'kill "$sleep_pid" 2>/dev/null || true; exit 0' TERM
+      sleep $((for_min * 60)) &
+      sleep_pid=$!
+      wait "$sleep_pid" || exit 0
+      kill -TERM "$parent" 2>/dev/null || true
+    ) &
+    timer_pid=$!
+  fi
+}
+
+start_pass() {
+  role=$1
+  pass=$(find_pass)
+  set -- "$pass"
+  if [ -n "${direct:-}" ]; then
+    set -- "$@" --direct "$direct"
+  fi
+  if [ -n "${intro:-}" ]; then
+    set -- "$@" --intro "$intro"
+  fi
+  if [ "${do_replace:-0}" -eq 1 ]; then
+    set -- "$@" --replace
+  fi
+  if [ "${send_secrets:-0}" -eq 1 ]; then
+    set -- "$@" --send-secrets
+  fi
+  # The id stays in $RUN/id. Do not hand the test file to the helper.
+  unset OVERTO_ID_FILE
+  OVERTO_RUN=$RUN OVERTO_ROLE=$role "$@" &
+  helper_pid=$!
+}
+
+wait_file() {
+  name=$1
+  ticks=0
+  limit=${wait_limit:-40}
+  while [ ! -f "$RUN/event/$name" ]; do
+    if [ "$name" != result ] && [ -f "$RUN/event/result" ]; then
+      finish_result || die "the transfer stopped. Nothing was written."
+      die "the transfer stopped. Nothing was written."
+    fi
+    if [ -n "${helper_pid:-}" ] && ! kill -0 "$helper_pid" 2>/dev/null; then
+      if [ -f "$RUN/event/result" ]; then
+        if [ "$name" = result ]; then
+          return 0
+        fi
+        finish_result || die "the transfer stopped. Nothing was written."
+        die "the transfer stopped. Nothing was written."
+      fi
+      fail2 "the other instance exited. Nothing was sent."
+    fi
+    ticks=$((ticks + 1))
+    if [ "$ticks" -gt "$limit" ]; then
+      die "the transfer stopped. Nothing was written."
+    fi
+    sleep 1
+  done
+}
+
+show_bound() {
+  wait_file bound
+  echo "Listening on:" >&2
+  reachable=0
+  while read -r line; do
+    [ -n "$line" ] || continue
+    printf '%s\n' "$line" >&2
+    case $line in
+      0.0.0.0:*|'[::]:'*) reachable=1 ;;
+    esac
+  done < "$RUN/event/bound"
+  if [ "$reachable" -eq 1 ]; then
+    echo "This is reachable on your network." >&2
+  fi
+}
+
+show_path() {
+  [ -f "$RUN/event/path" ] || return 0
+  case $(cat "$RUN/event/path") in
+    trying|lan|mapped|punch|direct) echo "Trying a direct path." >&2 ;;
+    relay) echo "Direct path did not open. Using the relay." >&2 ;;
+  esac
+}
+
+finish_result() {
+  wait_file result
+  result=$(cat "$RUN/event/result")
+  case $result in
+    done) return 0 ;;
+    declined) return 1 ;;
+    error\ *)
+      code=$(printf '%s\n' "$result" | awk '{ print $2 }')
+      msg=$(printf '%s\n' "$result" | awk '{ $1=""; $2=""; sub(/^ +/, ""); print }')
+      echo "overto: $msg" >&2
+      exit "$code"
+      ;;
+    *) die "the transfer stopped. Nothing was written." ;;
+  esac
+}
+
+confirm_sas() {
+  wait_file sas
+  show_path
+  digits=$(tr -cd '0-9' < "$RUN/event/sas")
+  if [ "${#digits}" -ne 6 ]; then
+    die "the transfer stopped. Nothing was written."
+  fi
+  echo "Read this code on a call or in person. Do not paste it into the chat where the id went." >&2
+  printf 'Check this code with them: %s-%s\n' "$(printf '%s' "$digits" | cut -c1-3)" "$(printf '%s' "$digits" | cut -c4-6)" >&2
+  if ask_yes "Same code on their side? [y/N]"; then
+    printf '%s\n' yes > "$RUN/cmd/sas"
+  else
+    printf '%s\n' no > "$RUN/cmd/sas"
+  fi
+  chmod 600 "$RUN/cmd/sas"
+}
+
+scan_secrets() {
+  hit=
+  while read -r rel; do
+    [ -n "$rel" ] || continue
+    if grep -E -a -q "$TRANSFER_RE" "$send_root/$rel"; then
+      hit=$rel
+      break
+    fi
+  done < "$send_list"
+  [ -n "$hit" ] || return 0
+  if [ "$send_secrets" -eq 1 ]; then
+    return 0
+  fi
+  echo "overto: $hit looks like it contains a secret." >&2
+  if ask_yes "Send it anyway? [y/N]"; then
+    return 0
+  fi
+  die "nothing was sent."
+}
+
+stage_out() {
+  while read -r rel; do
+    [ -n "$rel" ] || continue
+    dest=$RUN/stage/$rel
+    mkdir -p "$(dirname "$dest")"
+    cp "$send_root/$rel" "$dest"
+    chmod 600 "$dest"
+  done < "$send_list"
+}
+
+take_files() {
+  wait_file manifest
+  wait_file staged
+  plan=$(mktemp)
+  link_hit=
+  need_ask=0
+  first=1
+  while read -r line; do
+    if [ "$first" -eq 1 ]; then
+      first=0
+      [ "$line" = set ] || die "the transfer stopped. Nothing was written."
+      continue
+    fi
+    [ -n "$line" ] || continue
+    rel=$(printf '%s\n' "$line" | awk '{ print $1 }')
+    sz=$(printf '%s\n' "$line" | awk '{ print $2 }')
+    sum=$(printf '%s\n' "$line" | awk '{ print $3 }')
+    is_share_name "$rel" || die "I only send HANDOFF.md and the agent files."
+    src=$RUN/stage/$rel
+    if [ ! -f "$src" ] || [ -L "$src" ]; then
+      die "the transfer stopped. Nothing was written."
+    fi
+    got=$(file_size "$src")
+    got_sum=$(hash_file "$src")
+    if [ "$got" != "$sz" ] || [ "$got_sum" != "$sum" ]; then
+      die "the transfer stopped. Nothing was written."
+    fi
+    if [ -L "$rel" ]; then
+      link_hit=$rel
+    elif [ ! -e "$rel" ]; then
+      printf 'create %s\n' "$rel" >> "$plan"
+      need_ask=1
+    else
+      have=$(hash_file "$rel")
+      if [ "$have" = "$sum" ]; then
+        printf 'keep %s\n' "$rel" >> "$plan"
+        echo "$rel already matches. Left it." >&2
+      else
+        printf 'replace %s\n' "$rel" >> "$plan"
+        need_ask=1
+      fi
+    fi
+  done < "$RUN/event/manifest"
+  if [ -n "$link_hit" ]; then
+    echo "overto: $link_hit is a link. I will not follow it." >&2
+    printf '%s\n' no > "$RUN/cmd/files"
+    chmod 600 "$RUN/cmd/files"
+    finish_result || true
+    fail2 "nothing was written."
+  fi
+  decision=yes
+  if [ "$need_ask" -eq 1 ]; then
+    if [ "$do_replace" -eq 1 ]; then
+      decision=yes
+    else
+      while read -r act rel; do
+        case $act in
+          create|replace) printf '%s\n' "$rel" >&2 ;;
+        esac
+      done < "$plan"
+      echo "These files tell the next AI what to do." >&2
+      if ask_yes "Take them? [y/N]"; then
+        decision=yes
+      else
+        decision=no
+      fi
+    fi
+  fi
+  printf '%s\n' "$decision" > "$RUN/cmd/files"
+  chmod 600 "$RUN/cmd/files"
+  if [ "$decision" != yes ]; then
+    finish_result || true
+    fail2 "nothing was written."
+  fi
+  if ! finish_result; then
+    rm -f "$plan"
+    fail2 "nothing was written."
+  fi
+  while read -r act rel; do
+    [ -n "${act:-}" ] || continue
+    case $act in
+      keep) ;;
+      create|replace)
+        case $rel in
+          .cursor/rules/handoff.mdc)
+            mkdir .cursor 2>/dev/null || true
+            mkdir .cursor/rules 2>/dev/null || true
+            ;;
+        esac
+        mv "$RUN/stage/$rel" "$rel"
+        ;;
+    esac
+  done < "$plan"
+  rm -f "$plan"
+  echo "Files are in this folder. Commit them with the project when you want them kept."
+}
+
+cmd_here() {
+  direct=
+  intro=
+  for_min=30
+  do_replace=0
+  send_secrets=0
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --replace) do_replace=1; shift ;;
+      --for)
+        shift
+        [ $# -gt 0 ] || die "--for takes a whole number of minutes."
+        parse_for "$1"
+        shift
+        ;;
+      --intro)
+        shift
+        [ $# -gt 0 ] || die "the introduction point has to be https."
+        intro=$1
+        shift
+        ;;
+      --direct)
+        shift
+        if [ $# -gt 0 ]; then
+          case $1 in
+            --*) direct=127.0.0.1:0 ;;
+            *) direct=$1; shift ;;
+          esac
+        else
+          direct=127.0.0.1:0
+        fi
+        ;;
+      *) die "unknown argument: $1" ;;
+    esac
+  done
+  refuse_place . \
+    "I do not wait in this folder. Enter the project repo." \
+    "I do not wait in a root-owned folder."
+  need_intro_or_direct
+  display_id=$(new_id)
+  require_id_shape "$display_id"
+  open_run
+  echo "Over to you."
+  echo "This instance: $display_id"
+  if [ "$for_min" -eq 0 ]; then
+    echo "It works until you stop this command."
+  else
+    echo "It works until you stop this command, or for $for_min minutes."
+  fi
+  echo "Give that id to the other overto. It is not your name, and it dies with this command."
+  start_timer
+  start_pass here
+  if [ "$for_min" -eq 0 ]; then
+    wait_limit=86400
+  else
+    wait_limit=$((for_min * 60 + 30))
+  fi
+  show_bound
+  confirm_sas
+  sas_ans=$(cat "$RUN/cmd/sas" 2>/dev/null || true)
+  if [ "$sas_ans" != yes ]; then
+    finish_result || true
+    fail2 "nothing was written."
+  fi
+  wait_limit=300
+  take_files
+}
+
+cmd_to() {
+  direct=
+  intro=
+  id_arg=
+  path_arg=
+  send_secrets=0
+  do_replace=0
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --send-secrets) send_secrets=1; shift ;;
+      --intro)
+        shift
+        [ $# -gt 0 ] || die "the introduction point has to be https."
+        intro=$1
+        shift
+        ;;
+      --direct)
+        shift
+        [ $# -gt 0 ] || die "pass the address with --direct."
+        case $1 in
+          --*) die "pass the address with --direct." ;;
+        esac
+        direct=$1
+        shift
+        ;;
+      --*) die "unknown argument: $1" ;;
+      *)
+        if path_token "$1"; then
+          if [ -n "$path_arg" ]; then
+            die "unknown argument: $1"
+          fi
+          path_arg=$1
+        else
+          if [ -n "$id_arg" ]; then
+            die "unknown argument: $1"
+          fi
+          id_arg=$1
+        fi
+        shift
+        ;;
+    esac
+  done
+  if [ -n "$path_arg" ]; then
+    case $path_arg in
+      /*) ;;
+      *) die "Pass the full path of the project." ;;
+    esac
+  fi
+  if [ -n "$id_arg" ]; then
+    echo "overto: This id is on the command line. It stays in your shell history and in the process list until this command exits." >&2
+    raw_id=$id_arg
+  elif [ -n "${OVERTO_ID_FILE:-}" ]; then
+    [ -r "$OVERTO_ID_FILE" ] || die "pass the id on the terminal."
+    raw_id=$(cat "$OVERTO_ID_FILE")
+  elif [ -t 0 ]; then
+    printf 'Instance id: ' >&2
+    stty -echo || true
+    raw_id=
+    read raw_id || raw_id=${raw_id:-}
+    stty echo || true
+    printf '\n' >&2
+  else
+    die "pass the id on the terminal."
+  fi
+  require_id_shape "$raw_id"
+  collect_send "$path_arg"
+  scan_secrets
+  need_intro_or_direct
+  echo "Project: $(basename "$send_root")" >&2
+  echo "Sending:" >&2
+  while read -r rel; do
+    [ -n "$rel" ] || continue
+    echo "- $rel" >&2
+  done < "$send_list"
+  open_run
+  stage_out
+  start_pass to
+  wait_limit=40
+  confirm_sas
+  wait_limit=300
+  if finish_result; then
+    return 0
+  fi
+  fail2 "they declined. Nothing was sent."
 }
 
 cmd=${1:-help}
@@ -338,6 +1082,8 @@ case $cmd in
   show|ver) cmd_show ;;
   date|fecha) cmd_date ;;
   share) cmd_share "$@" ;;
+  here) cmd_here "$@" ;;
+  to) cmd_to "$@" ;;
   help|ayuda|-h|--help) help ;;
   version|--version) echo "$VERSION" ;;
   *)
